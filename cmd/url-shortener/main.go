@@ -7,7 +7,6 @@ import (
 func main() {
 	// TODO: init config: cleanenv
 	cfg := config.MustLoad()
-
 	//TODO: init loger: slog
 
 	//TODO: init storage: sqlite3

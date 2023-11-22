@@ -20,8 +20,14 @@ type HTTPServer struct {
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
 }
 
-func MustLoad() {
-	configPath := os.Getenv("CONFIG_PATH")
+func MustLoad() Config {
+	configPath := "./config/local.yaml"
+	err := os.Setenv("CONFIG_PATH", configPath)
+	if err != nil {
+		log.Fatal("Failed to set CONFIG_PATH")
+	}
+
+	configPath = os.Getenv("CONFIG_PATH")
 	if configPath == "" {
 		log.Fatal("CONFIG PATH is not set")
 	}
