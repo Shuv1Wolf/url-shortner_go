@@ -4,8 +4,12 @@ import (
 	"log/slog"
 	"os"
 	"url-shortener/internal/config"
+	mwLogger "url-shortener/internal/http-server/middleware/logger"
 	"url-shortener/internal/lib/logger/sl"
 	"url-shortener/internal/storage/sqlite"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 )
 
 const (
@@ -20,7 +24,7 @@ func main() {
 
 	// TODO: init loger: slog
 	log := setupLogger(cfg.Env)
-	log.Info("starting url-shertener", slog.String("env", cfg.Env))
+	log.Info("starting url-shortener", slog.String("env", cfg.Env))
 	log.Debug("debug messages are enabled")
 
 	// TODO: init storage: sqlite3
@@ -30,10 +34,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	_ = storage
-
 	// TODO: init router: chi, "chi render"
+	router := chi.NewRouter()
 
+	// middleware
+	router.Use(middleware.RequestID)
+	router.Use(mwLogger.New(log))
 	// TODO: run server
 }
 
