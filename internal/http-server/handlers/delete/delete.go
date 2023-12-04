@@ -1,4 +1,4 @@
-package redirect
+package delete
 
 import (
 	"errors"
@@ -22,13 +22,13 @@ type Response struct {
 	Alias string `json:"alias,omitempty"`
 }
 
-type GetterURL interface {
-	GetURL(alias string) (string, error)
+type DelURL interface {
+	DeleteURL(alias string) (string, error)
 }
 
-func New(log *slog.Logger, getterUrl GetterURL) http.HandlerFunc {
+func New(log *slog.Logger, delUrl DelURL) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.redirect.redirect.New"
+		const op = "handlers.delete.delete.New"
 
 		log = log.With(
 			slog.String("op", op),
@@ -44,7 +44,7 @@ func New(log *slog.Logger, getterUrl GetterURL) http.HandlerFunc {
 			return
 		}
 
-		resURL, err := getterUrl.GetURL(alias)
+		resURL, err := delUrl.DeleteURL(alias)
 		if errors.Is(err, storage.ErrURLNotFound) {
 			log.Info("url not found", "alias", alias)
 
@@ -54,15 +54,18 @@ func New(log *slog.Logger, getterUrl GetterURL) http.HandlerFunc {
 		}
 
 		if err != nil {
-			log.Error("failed to get url", sl.Err(err))
+			log.Error("failed to delete url", sl.Err(err))
 
 			render.JSON(w, r, resp.Error("internal error"))
 
 			return
 		}
 
-		log.Info("got url", slog.String("url", resURL))
+		log.Info("delete url and alias", slog.String("url", resURL), slog.String("alias", alias))
 
-		http.Redirect(w, r, resURL, http.StatusFound)
+		render.JSON(w, r, Response{
+			Response: resp.OK(),
+			Alias:    alias,
+		})
 	}
 }
