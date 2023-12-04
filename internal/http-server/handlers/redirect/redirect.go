@@ -1,14 +1,16 @@
 package redirect
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	resp "url-shortener/internal/lib/api/response"
 	"url-shortener/internal/lib/logger/sl"
+	"url-shortener/internal/storage"
 
+	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
-	"github.com/go-playground/validator"
 )
 
 type Request struct {
@@ -33,41 +35,34 @@ func New(log *slog.Logger, getterUrl GetterURL) http.HandlerFunc {
 			slog.String("required_id", middleware.GetReqID(r.Context())),
 		)
 
-		var req Request
+		alias := chi.URLParam(r, "alias")
+		if alias == "" {
+			log.Info("alias is empty")
 
-		err := render.DecodeJSON(r.Body, &req)
+			render.JSON(w, r, resp.Error("invalid request"))
+
+			return
+		}
+
+		resURL, err := getterUrl.GetURL(alias)
+		if errors.Is(err, storage.ErrURLNotFound) {
+			log.Info("url not found", "alias", alias)
+
+			render.JSON(w, r, resp.Error("not found"))
+
+			return
+		}
+
 		if err != nil {
-			log.Error("failed to decode request body", sl.Err(err))
+			log.Error("failed to get url", sl.Err(err))
 
-			render.JSON(w, r, resp.Error("failed decode request"))
-
-			return
-		}
-
-		log.Info("request body  decoded", slog.Any("request", req))
-
-		if err := validator.New().Struct(req); err != nil {
-			validateErr := err.(validator.ValidationErrors)
-
-			log.Error("failed to validate request body", sl.Err(err))
-
-			render.JSON(w, r, resp.ValidationError(validateErr))
+			render.JSON(w, r, resp.Error("internal error"))
 
 			return
 		}
 
-		alias, err := getterUrl.GetURL(req.Alias)
-		if err != nil {
-			log.Error("failed to get alias", sl.Err(err))
+		log.Info("got url", slog.String("url", resURL))
 
-			render.JSON(w, r, resp.Error("failed to get alias"))
-
-			return
-		}
-
-		render.JSON(w, r, Response{
-			Response: resp.OK(),
-			Alias:    alias,
-		})
+		http.Redirect(w, r, resURL, http.StatusFound)
 	}
 }
