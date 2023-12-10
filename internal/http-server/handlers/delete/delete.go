@@ -8,9 +8,9 @@ import (
 	"url-shortener/internal/lib/logger/sl"
 	"url-shortener/internal/storage"
 
-	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
+	"github.com/go-playground/validator"
 )
 
 type Request struct {
@@ -35,14 +35,30 @@ func New(log *slog.Logger, delUrl DelURL) http.HandlerFunc {
 			slog.String("required_id", middleware.GetReqID(r.Context())),
 		)
 
-		alias := chi.URLParam(r, "alias")
-		if alias == "" {
-			log.Info("alias is empty")
+		var req Request
 
-			render.JSON(w, r, resp.Error("invalid request"))
+		err := render.DecodeJSON(r.Body, &req)
+		if err != nil {
+			log.Error("failed to decode request body", sl.Err(err))
+
+			render.JSON(w, r, resp.Error("failed decode request"))
 
 			return
 		}
+
+		log.Info("request body decoded", slog.Any("request", req))
+
+		if err := validator.New().Struct(req); err != nil {
+			validateErr := err.(validator.ValidationErrors)
+
+			log.Error("failed to validate request body", sl.Err(err))
+
+			render.JSON(w, r, resp.ValidationError(validateErr))
+
+			return
+		}
+
+		alias := req.Alias
 
 		resURL, err := delUrl.DeleteURL(alias)
 		if errors.Is(err, storage.ErrURLNotFound) {
