@@ -34,6 +34,12 @@ func New(storagePath string) (*Storage, error) {
 func (s *Storage) SaveURL(urlToSave, alias string) (int64, error) {
 	const op = "stotage.ORM.SaveURL"
 
+	var existingUrl Url
+	s.db.First(&existingUrl, "alias = ?", alias)
+	if existingUrl.ID != 0 {
+		return 0, storage.ErrAliasExists
+	}
+
 	url := Url{Url: urlToSave, Alias: alias}
 	result := s.db.Create(&url)
 	if result.Error != nil {
