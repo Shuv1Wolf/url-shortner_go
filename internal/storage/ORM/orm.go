@@ -49,12 +49,30 @@ func (s *Storage) GetURL(alias string) (string, error) {
 	var url Url
 
 	result := s.db.First(&url, "alias = ?", alias)
-	if result.Error != nil {
+	if result.RowsAffected == 0 {
+		return "", storage.ErrURLNotFound
+	} else if result.Error != nil {
 		return "", fmt.Errorf("%s: %w", op, result.Error)
-	} else if result.RowsAffected == 0 {
+	}
+	return url.Url, nil
+
+}
+
+func (s *Storage) DeleteURL(alias string) (string, error) {
+	const op = "stotage.ORM.DeleteURL"
+
+	var url Url
+
+	result := s.db.First(&url, "alias = ?", alias)
+	if result.RowsAffected == 0 {
 		return "", storage.ErrURLNotFound
 	}
 
-	return url.Url, nil
+	deleteResult := s.db.Delete(&url)
+	if deleteResult.Error != nil {
+		return "", fmt.Errorf("%s: %w", op, deleteResult.Error)
+	}
+
+	return url.Alias, nil
 
 }
