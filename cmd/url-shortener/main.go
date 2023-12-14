@@ -5,13 +5,12 @@ import (
 	"net/http"
 	"os"
 	"url-shortener/internal/config"
-	"url-shortener/internal/http-server/handlers/delete"
 	"url-shortener/internal/http-server/handlers/redirect"
 	"url-shortener/internal/http-server/handlers/url/save"
 	mwLogger "url-shortener/internal/http-server/middleware/logger"
 	"url-shortener/internal/lib/logger/handlers/slogpretty"
 	"url-shortener/internal/lib/logger/sl"
-	"url-shortener/internal/storage/sqlite"
+	orm "url-shortener/internal/storage/ORM"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -24,7 +23,6 @@ const (
 )
 
 func main() {
-	// TODO: init config: cleanenv
 	cfg := config.MustLoad()
 
 	// TODO: init loger: slog
@@ -33,14 +31,15 @@ func main() {
 	log.Debug("debug messages are enabled")
 
 	// TODO: init storage: sqlite3
-	storage, err := sqlite.New(cfg.StoragePath)
+	// storage, err := sqlite.New(cfg.StoragePath)
+	storage, err := orm.New(cfg.StoragePath)
 	if err != nil {
 		log.Error("failed to init storage", sl.Err(err))
 		os.Exit(1)
 	}
 
 	_ = storage
-	// TODO: init router: chi, "chi render"
+
 	router := chi.NewRouter()
 
 	// middleware
@@ -55,7 +54,7 @@ func main() {
 		}))
 
 		r.Post("/", save.New(log, storage))
-		r.Delete("/", delete.New(log, storage))
+		// r.Delete("/", delete.New(log, storage))
 	})
 
 	router.Get("/{alias}", redirect.New(log, storage))
@@ -75,8 +74,6 @@ func main() {
 	}
 
 	log.Error("server stopped", sl.Err(err))
-	// TODO: run server
-
 }
 
 func setupLogger(env string) *slog.Logger {

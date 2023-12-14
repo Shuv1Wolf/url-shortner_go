@@ -28,7 +28,7 @@ type DelURL interface {
 
 func New(log *slog.Logger, delUrl DelURL) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.delete.delete.New"
+		const op = "handlers.url.delete.New"
 
 		log = log.With(
 			slog.String("op", op),

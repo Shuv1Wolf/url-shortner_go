@@ -28,7 +28,7 @@ type GetterURL interface {
 
 func New(log *slog.Logger, getterUrl GetterURL) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.redirect.redirect.New"
+		const op = "handlers.redirect.New"
 
 		log = log.With(
 			slog.String("op", op),
