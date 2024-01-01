@@ -25,6 +25,7 @@ type HTTPServer struct {
 }
 
 type Client struct {
+	AppID        int           `yaml:"appId"`
 	Address      string        `yaml:"address"`
 	Timeout      time.Duration `yaml:"timeout"`
 	RetriesCount int           `yaml:"retriesCount"`

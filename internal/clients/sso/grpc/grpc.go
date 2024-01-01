@@ -25,6 +25,7 @@ func New(
 	addr string,
 	timeout time.Duration,
 	retriesCount int,
+	appId int,
 ) (*Client, error) {
 	const op = "grpc.New"
 
@@ -50,9 +51,18 @@ func New(
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &Client{
+	client := &Client{
 		api: ssov1.NewAuthClient(cc),
-	}, nil
+	}
+
+	// Проверка подключения к клиенту sso
+	// TODO: при false создавать в бд приложение с id
+	_, err = client.ping(appId)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return client, nil
 }
 
 func (c *Client) IsAdmin(ctx context.Context, userID int64) (bool, error) {
@@ -72,4 +82,14 @@ func InterceptorLogger(l *slog.Logger) grpclog.Logger {
 	return grpclog.LoggerFunc(func(ctx context.Context, level grpclog.Level, msg string, fields ...any) {
 		l.Log(ctx, slog.Level(level), msg, fields...)
 	})
+}
+
+func (c *Client) ping(appId int) (*ssov1.IsPingResponse, error) {
+	ping, err := c.api.Ping(context.Background(), &ssov1.IsPingRequest{
+		AppId: int64(appId),
+	})
+	if err != nil {
+		return ping, err
+	}
+	return ping, nil
 }

@@ -32,13 +32,14 @@ func main() {
 	log.Info("starting url-shortener", slog.String("env", cfg.Env))
 	log.Debug("debug messages are enabled")
 
-	log.Info("connect to SSO", slog.String("address", cfg.Clients.SSO.Address))
+	log.Info("init SSO client", slog.String("address", cfg.Clients.SSO.Address))
 	ssoClient, err := ssogrpc.New(
 		context.Background(),
 		log,
 		cfg.Clients.SSO.Address,
 		cfg.Clients.SSO.Timeout,
 		cfg.Clients.SSO.RetriesCount,
+		cfg.Clients.SSO.AppID,
 	)
 	if err != nil {
 		log.Error("failed to init sso client", sl.Err(err))
