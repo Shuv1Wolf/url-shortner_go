@@ -5,4 +5,10 @@ http_server:
   timeout: 4s
   idle_timeout: 60s
   user: admin
-  password: admin
+  password: 222
+clients:
+  sso:
+    address: "localhost:44544"
+    timeout: 10s
+    RetriesCount: 10
+    Insecure: false

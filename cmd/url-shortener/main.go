@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
+	ssogrpc "url-shortener/internal/clients/sso/grpc"
 	"url-shortener/internal/config"
 	"url-shortener/internal/http-server/handlers/redirect"
 	"url-shortener/internal/http-server/handlers/url/delete"
@@ -26,12 +28,23 @@ const (
 func main() {
 	cfg := config.MustLoad()
 
-	// TODO: init loger: slog
 	log := setupLogger(cfg.Env)
 	log.Info("starting url-shortener", slog.String("env", cfg.Env))
 	log.Debug("debug messages are enabled")
 
-	// TODO: init storage: sqlite3
+	log.Info("connect to SSO", slog.String("address", cfg.Clients.SSO.Address))
+	ssoClient, err := ssogrpc.New(
+		context.Background(),
+		log,
+		cfg.Clients.SSO.Address,
+		cfg.Clients.SSO.Timeout,
+		cfg.Clients.SSO.RetriesCount,
+	)
+	if err != nil {
+		log.Error("failed to init sso client", sl.Err(err))
+		os.Exit(1)
+	}
+
 	// storage, err := sqlite.New(cfg.StoragePath)
 	storage, err := orm.New(cfg.StoragePath)
 	if err != nil {
@@ -56,6 +69,15 @@ func main() {
 
 		r.Post("/", save.New(log, storage))
 		r.Delete("/", delete.New(log, storage))
+	})
+
+	// test
+	router.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
+		_, err := ssoClient.IsAdmin(context.Background(), 10)
+		if err != nil {
+			log.Error("ERROR SSO ADMIN", sl.Err(err))
+
+		}
 	})
 
 	router.Get("/{alias}", redirect.New(log, storage))
