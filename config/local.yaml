@@ -8,9 +8,10 @@ http_server:
   password: 222
 clients:
   sso:
-    appId: 3
     address: "localhost:44544"
     timeout: 10s
     RetriesCount: 10
     Insecure: false
-AppSecret: app_url_shortener_72/86'2-41`.0498
+appId: 313422
+appName: url_shortenerdsfs
+appSecret: app

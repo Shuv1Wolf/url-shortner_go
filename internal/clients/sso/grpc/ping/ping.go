@@ -1,4 +1,4 @@
-package grpc
+package ping
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 )
 
 type Client struct {
-	api ssov1.AuthClient
+	api ssov1.PingClient
 	log *slog.Logger
 }
 
@@ -25,9 +25,11 @@ func New(
 	addr string,
 	timeout time.Duration,
 	retriesCount int,
-	appId int,
+	appId int64,
+	appName string,
+	appSecret string,
 ) (*Client, error) {
-	const op = "grpc.New"
+	const op = "ping.New"
 
 	retryOpts := []grpcretry.CallOption{
 		grpcretry.WithCodes(codes.NotFound, codes.Aborted, codes.DeadlineExceeded),
@@ -52,30 +54,30 @@ func New(
 	}
 
 	client := &Client{
-		api: ssov1.NewAuthClient(cc),
+		api: ssov1.NewPingClient(cc),
 	}
 
-	// Проверка подключения к клиенту sso
-	// TODO: при false создавать в бд приложение с id
-	_, err = client.ping(appId)
+	log.Info("checking connection to grps")
+	ping, err := client.ping(int(appId))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return client, nil
-}
-
-func (c *Client) IsAdmin(ctx context.Context, userID int64) (bool, error) {
-	const op = "grpc.IsAdmin"
-
-	resp, err := c.api.IsAdmin(ctx, &ssov1.IsAdminRequest{
-		UserId: userID,
-	})
-	if err != nil {
-		return false, fmt.Errorf("%s: %w", op, err)
+	if !ping {
+		log.Info("the application is not in the sso")
+		log.Info("creating a new application with information from the config")
+		res, err := client.api.NewApp(context.Background(), &ssov1.IsNewAppRequest{
+			Id:     int64(appId),
+			Name:   appName,
+			Secret: appSecret,
+		})
+		if err != nil {
+			panic(err)
+		}
+		log.Info(res.String())
 	}
 
-	return resp.IsAdmin, nil
+	return client, err
 }
 
 func InterceptorLogger(l *slog.Logger) grpclog.Logger {
@@ -84,12 +86,12 @@ func InterceptorLogger(l *slog.Logger) grpclog.Logger {
 	})
 }
 
-func (c *Client) ping(appId int) (*ssov1.IsPingResponse, error) {
+func (c *Client) ping(appId int) (bool, error) {
 	ping, err := c.api.Ping(context.Background(), &ssov1.IsPingRequest{
 		AppId: int64(appId),
 	})
 	if err != nil {
-		return ping, err
+		return ping.GetClient(), err
 	}
-	return ping, nil
+	return ping.GetClient(), nil
 }

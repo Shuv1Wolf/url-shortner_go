@@ -13,7 +13,9 @@ type Config struct {
 	StoragePath string `yaml:"storage_path" env-reauired:"true"`
 	HTTPServer  `yaml:"http_server"`
 	Clients     ClientConfig `yaml:"clients"`
-	AppSecret   string       `yaml:"app_secret" env-reauired:"true" env:"APP_SECRET"`
+	AppId       int64        `yaml:"appId" env-default:"1"`
+	AppName     string       `yaml:"appName" env-default:"url-shortener"`
+	AppSecret   string       `yaml:"appSecret" env-reauired:"true" env:"APP_SECRET"`
 }
 
 type HTTPServer struct {
@@ -25,7 +27,6 @@ type HTTPServer struct {
 }
 
 type Client struct {
-	AppID        int           `yaml:"appId"`
 	Address      string        `yaml:"address"`
 	Timeout      time.Duration `yaml:"timeout"`
 	RetriesCount int           `yaml:"retriesCount"`
