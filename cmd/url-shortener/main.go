@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"url-shortener/internal/clients/sso/client"
+	"url-shortener/internal/clients/sso"
 	"url-shortener/internal/config"
 	"url-shortener/internal/http-server/handlers/redirect"
 	"url-shortener/internal/http-server/handlers/url/delete"
@@ -14,6 +14,8 @@ import (
 	"url-shortener/internal/lib/logger/handlers/slogpretty"
 	"url-shortener/internal/lib/logger/sl"
 	orm "url-shortener/internal/storage/ORM"
+
+	authMiddleware "url-shortener/internal/http-server/middleware/auth"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -33,7 +35,7 @@ func main() {
 	log.Debug("debug messages are enabled")
 
 	log.Info("init SSO client", slog.String("address", cfg.Clients.SSO.Address))
-	_ = client.New(
+	client, _ := sso.New(
 		context.Background(),
 		log,
 		cfg.Clients.SSO.Address,
@@ -61,10 +63,9 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
+	authMiddleware := authMiddleware.New(log, cfg.AppSecret, client)
 	router.Route("/url", func(r chi.Router) {
-		r.Use(middleware.BasicAuth("url-shortener", map[string]string{
-			cfg.HTTPServer.User: cfg.HTTPServer.Password,
-		}))
+		r.Use(authMiddleware)
 
 		r.Post("/", save.New(log, storage))
 		r.Delete("/", delete.New(log, storage))

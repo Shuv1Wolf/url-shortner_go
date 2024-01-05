@@ -12,6 +12,6 @@ clients:
     timeout: 10s
     RetriesCount: 10
     Insecure: false
-appId: 313422
-appName: url_shortenerdsfs
-appSecret: app
+appId: 1
+appName: url_shortener
+appSecret: app_1_secret_CODE_23_/s321s

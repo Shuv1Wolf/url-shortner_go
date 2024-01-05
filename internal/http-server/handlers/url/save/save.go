@@ -34,7 +34,20 @@ type URLSaver interface {
 
 func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		const op = "handlers.url.save.New"
+
+		// userID := r.Context().Value("uid").(int)
+		// fmt.Println(userID)
+		status := r.Context().Value("status").(int)
+		if status == 401 {
+			log.Warn("unauthorized user")
+
+			render.Status(r, http.StatusUnauthorized)
+			render.JSON(w, r, resp.Error("unauthorized user"))
+
+			return
+		}
 
 		log = log.With(
 			slog.String("op", op),
@@ -47,6 +60,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 		if err != nil {
 			log.Error("failed to decode request body", sl.Err(err))
 
+			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, resp.Error("failed decode request"))
 
 			return
@@ -59,6 +73,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 			log.Error("failed to validate request body", sl.Err(err))
 
+			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, resp.ValidationError(validateErr))
 
 			return
@@ -73,6 +88,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 		if errors.Is(err, storage.ErrAliasExists) {
 			log.Info("alias already exists", slog.String("url", req.URL))
 
+			render.Status(r, http.StatusConflict)
 			render.JSON(w, r, resp.Error("alias already exists"))
 
 			return
@@ -81,6 +97,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 		if err != nil {
 			log.Error("failed to save url", sl.Err(err))
 
+			render.Status(r, http.StatusInternalServerError)
 			render.JSON(w, r, resp.Error("failed to save url"))
 
 			return

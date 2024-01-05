@@ -30,6 +30,16 @@ func New(log *slog.Logger, delUrl DelURL) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.delete.New"
 
+		status := r.Context().Value("status").(int)
+		if status == 401 {
+			log.Warn("unauthorized user")
+
+			render.Status(r, http.StatusUnauthorized)
+			render.JSON(w, r, resp.Error("unauthorized user"))
+
+			return
+		}
+
 		log = log.With(
 			slog.String("op", op),
 			slog.String("required_id", middleware.GetReqID(r.Context())),
@@ -41,6 +51,7 @@ func New(log *slog.Logger, delUrl DelURL) http.HandlerFunc {
 		if err != nil {
 			log.Error("failed to decode request body", sl.Err(err))
 
+			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, resp.Error("failed decode request"))
 
 			return
@@ -53,6 +64,7 @@ func New(log *slog.Logger, delUrl DelURL) http.HandlerFunc {
 
 			log.Error("failed to validate request body", sl.Err(err))
 
+			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, resp.ValidationError(validateErr))
 
 			return
@@ -64,6 +76,7 @@ func New(log *slog.Logger, delUrl DelURL) http.HandlerFunc {
 		if errors.Is(err, storage.ErrURLNotFound) {
 			log.Info("url not found", "alias", alias)
 
+			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, resp.Error("not found"))
 
 			return
@@ -72,6 +85,7 @@ func New(log *slog.Logger, delUrl DelURL) http.HandlerFunc {
 		if err != nil {
 			log.Error("failed to delete url", sl.Err(err))
 
+			render.Status(r, http.StatusInternalServerError)
 			render.JSON(w, r, resp.Error("internal error"))
 
 			return
